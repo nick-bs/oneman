@@ -104,7 +104,7 @@ function GetPortInfo() {
     local mode serve_port serve_info chain_info nr_start nr_serve nr_chain nr_end peerfile chain_proto iplist iplist_file serve_proto
     serve_port=$1
     peerfile=${CONFDIR}/${serve_port}/peer
-    nr_serve=`awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print NR}' ${CONF}`
+    nr_serve=`awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print NR}' ${CONF}`
     nr_chain=$((${nr_serve}+1))
     nr_start=$((${nr_serve}-1))
     if [[ `awk -v nr=${nr_serve} -F ':|"' 'NR==nr {print $5}' ${CONF}` = tcp ]]; then
@@ -144,7 +144,7 @@ function GetPortInfo() {
 }
 
 function DeleteRoutes() {
-    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
+    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
     local nr ans serve_port
     while true; do
         read -p "输入要删除的本地监听端口, 输入q退出: " serve_port
@@ -157,8 +157,9 @@ function DeleteRoutes() {
 }
 
 function ListRoutes() {
-    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
-    for i in `awk -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}`; do
+    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
+    for i in `awk -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}`; do
+	    echo $i
         GetPortInfo $i | awk -F '|' 'BEGIN {print "=================================="} \
             { \
                 print "监听端口: " $1; \
@@ -175,11 +176,11 @@ function ListRoutes() {
 
 function EditRoutes() {
     local serve_port mode ans nr_start nr_serve nr_serve nr_end port_info serve_proto chain_group_proto chain_group_name serve_port_des
-    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
+    [[ -z `awk -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ {print $2}' ${CONF}` ]] && echo -e "尚未添加任何转发线路" && return 0
     while true; do
         while read -p "输入要修改的线路对应的端口，输入q退出: " serve_port; do
             [[ ${serve_port} = q ]] && return 0
-            [[ -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]] && echo -e "该端口不存在" || break
+            [[ -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]] && echo -e "该端口不存在" || break
         done
         [[ ${serve_port} = q ]] && return 0
         port_info=`GetPortInfo ${serve_port}`
@@ -324,7 +325,7 @@ function AddRoutes() {
     read ans
     if [[ ${ans} = 1 ]]; then
         read -p "请选择本地监听端口: " serve_port
-        while [[ ! -z `ss -ntlp | grep ${serve_port}` || ! ${serve_port} =~ ^[0-9]+$ || ! -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]]; do
+        while [[ ! -z `ss -ntlp | grep ${serve_port}` || ! ${serve_port} =~ ^[0-9]+$ || ! -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]]; do
             read -p "此端口已被使用或者输入非数字，请选择新的端口: " serve_port 
         done
         SERVENODES="\"ServeNodes\": [ \"tcp://:${serve_port}\" ],"
@@ -363,7 +364,7 @@ function AddRoutes() {
         fi
     elif [[ ${ans} = 2 ]]; then
         read -p "请选择本地监听端口: " serve_port
-        while [[ ! -z `ss -ntlp | grep ${serve_port}` || ! ${serve_port} =~ ^[0-9]+$ || ! -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/([^[:alpha:]])' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]]; do
+        while [[ ! -z `ss -ntlp | grep ${serve_port}` || ! ${serve_port} =~ ^[0-9]+$ || ! -z `awk -v serve_port=${serve_port} -F '(://:)|(gost/)|(/peer)|(" ])|/.*:[[:digit:]+]' '/"ServeNodes": \[ ".+" \]/ && $2 == serve_port {print $2}' ${CONF}` ]]; do
             read -p "此端口已被使用或者输入非数字，请选择新的端口: " serve_port
         done
         echo -e "请选择传输协议(客户端和服务端必须保持一致)"
